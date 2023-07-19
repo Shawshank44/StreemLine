@@ -70,7 +70,7 @@ class Database{
                 if (!isduplicate || allowDuplicates) {
                   read.push(data);
                   const writeStream = fs.createWriteStream(clusterpath);
-                  writeStream.write(JSON.stringify(read));
+                  writeStream.write(JSON.stringify(read,null,2));
                   writeStream.end(() => {
                     return resolve();
                   });
@@ -137,7 +137,7 @@ class Database{
                         }
                     })
                     const writeStream = fs.createWriteStream(clusterpath)
-                    writeStream.write(JSON.stringify(read))
+                    writeStream.write(JSON.stringify(read,null,2))
                     writeStream.end()
     
                     writeStream.on('finish', ()=>{
@@ -184,7 +184,7 @@ class Database{
               read = deleteQuery;
         
               const writeStream = fs.createWriteStream(clusterpath);
-              writeStream.write(JSON.stringify(read));
+              writeStream.write(JSON.stringify(read,null,2));
               writeStream.end();
               writeStream.on('finish', () => {
                 resolve('Data deleted successfully');
@@ -200,70 +200,140 @@ class Database{
           });
     }
 
-    search(databaseName, clustername, searchElement){
-        return new Promise((resolve, reject) => {
-            const clusterpath = path.join(databaseName, `${clustername}.json`);
-            if (!fs.existsSync(clusterpath)) {
-                return reject(new Error('Cluster does not exist'));
-            }
+    search(databaseName, clustername, searchElement) {
+      return new Promise((resolve, reject) => {
+          const clusterpath = path.join(databaseName, `${clustername}.json`);
+          if (!fs.existsSync(clusterpath)) {
+              return reject(new Error('Cluster does not exist'));
+          }
+  
+          const readStream = fs.createReadStream(clusterpath);
+          readStream.on('error', error => reject(new Error(`Error reading data: ${error.message}`)));
+  
+          let readData = '';
+          readStream.on('data', chunk => {
+              readData += chunk;
+          });
+  
+          readStream.on('end', () => {
+              try {
+                  let read = JSON.parse(readData);
+                  const results = read.filter(obj => {
+                      const values = Object.values(obj);
+                      for (let i = 0; i < values.length; i++) {
+                          if (Array.isArray(values[i])) { // Check if value is an array
+                              // Search within the array
+                              for (let j = 0; j < values[i].length; j++) {
+                                  if ((typeof values[i][j] === "string" || typeof values[i][j] === "number") && String(values[i][j]).includes(searchElement)) {
+                                      return true;
+                                  }
+                              }
+                          } else {
+                              if ((typeof values[i] === "string" || typeof values[i] === "number") && String(values[i]).includes(searchElement)) {
+                                  return true;
+                              }
+                          }
+                      }
+                      return false;
+                  });
+                  resolve(results);
+              } catch (error) {
+                  reject(new Error(`Error parsing JSON data: ${error.message}`));
+              }
+          });
+      });
+    }
     
-            const readStream = fs.createReadStream(clusterpath);
-            readStream.on('error', error => reject(new Error(`Error reading data: ${error.message}`)));
-    
-            let readData = '';
-            readStream.on('data', chunk => {
-                readData += chunk;
-            });
-    
-            readStream.on('end', () => {
-                try {
-                    let read = JSON.parse(readData);
-                    const results = read.filter(obj => {
-                        const values = Object.values(obj);
-                        for (let i = 0; i < values.length; i++) {
-                            if ((typeof values[i] === "string" || typeof values[i] === "number") && String(values[i]).includes(searchElement)) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
-                    resolve(results);
-                } catch (error) {
-                    reject(new Error(`Error parsing JSON data: ${error.message}`));
-                }
-            });
-        });
+
+    createLink(databaseName, clusterName, sourceID, targetID) {
+      return new Promise((resolve, reject) => {
+        try {
+          const clusterPath = path.join(databaseName, `${clusterName}.json`);
+  
+          if (!fs.existsSync(clusterPath)) {
+            throw new Error('Cluster does not exist in the database');
+          }
+  
+          let clusterData = JSON.parse(fs.readFileSync(clusterPath, { encoding: 'utf8' }));
+  
+          // Find the source and target nodes in the cluster data
+          const sourceNode = clusterData.find((node) => node.id === sourceID);
+          const targetNode = clusterData.find((node) => node.id === targetID);
+  
+          if (!sourceNode || !targetNode) {
+            throw new Error('Source or target node not found');
+          }
+  
+          // Add the link between the source and target nodes
+          // const link = {
+          //   source: sourceNode.id,
+          //   target: targetNode.id,
+          // };
+
+          // const link = [sourceNode.id,targetNode.id]
+  
+          // Add the link to the source node's links array
+          if (!sourceNode.links) {
+            sourceNode.links = [];
+          }
+          sourceNode.links.push(sourceNode.id,targetNode.id);
+  
+          // Add the link to the target node's links array
+          if (!targetNode.links) {
+            targetNode.links = [];
+          }
+          targetNode.links.push(sourceNode.id,targetNode.id);
+  
+          fs.writeFileSync(clusterPath, JSON.stringify(clusterData, null, 2));
+  
+          resolve('Link created successfully');
+        } catch (error) {
+          reject(error);
+        }
+      });
     }
 
+   
+  
 
+   
 }
 
 
 const db = new Database()
 
 // creating the database
-// db.createDatabase('keepers').then(()=>{
+// db.createDatabase('users').then(()=>{
 //     console.log('database created successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
 // creating the cluster
-// db.createCluster('keepers','agents').then(()=>{
+// db.createCluster('users','agents').then(()=>{
 //     console.log('cluster created');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
 // inserting data into the database
-// db.insert('keepers','agents',{name: 'sukesh',age:18,phonenumber:9876543209,gender:'male'},false).then(()=>{
+// db.insert('users','agents',{id:'2003', name: 'suresh',age:17,phonenumber:9876543217,gender:'male'},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
+// db.createLink('users','agents', '2005', '2004')
+//   .then(() => {
+//     console.log('Link created successfully');
+//   })
+//   .catch((error) => {
+//     console.error('Error creating link:', error);
+//   });
+
+
 // Query the data cluster:
-// db.Query('keepers','agents',(data)=>data)
+// db.Query('users','agents',(data)=>data)
 // .then((data)=>{
 //     console.log(data);
 // }).catch((err)=>{
@@ -271,17 +341,20 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('keepers','agents',(data)=>data.name ==='shashank',{gender : 'male'}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'mukesh',{specid : '789'}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('keepers','agents',(data)=>data.age === 18).then(()=>{
+// db.delete('users','agents',(data)=>data.name === 'suresh').then(()=>{
 //     console.log('data deleted sucessfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.search('keepers','agents','male').then((data)=>{
+// db.search('users','agents','2005').then((data)=>{
 //     console.log(data);
+    
 // }).catch((err)=>{
 //     console.log(err);
 // })
+
+
