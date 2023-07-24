@@ -1,26 +1,23 @@
 [
   {
-    "id": "2005",
-    "name": "shashank.BR",
+    "id": "2004",
+    "name": "shashank",
     "age": 22,
-    "phonenumber": 9876543218,
-    "gender": "male",
-    "links": [
-      "2005",
-      "2004"
-    ],
-    "keepers": "707"
+    "phonenumber": 9876543210,
+    "manyRelationship": [
+      "2006"
+    ]
   },
   {
-    "id": "2004",
-    "name": "mukesh",
-    "age": 18,
-    "phonenumber": 9876543210,
-    "gender": "male",
-    "links": [
-      "2005",
-      "2004"
-    ],
-    "specid": "789"
+    "id": "2006",
+    "name": "prakash",
+    "age": 63,
+    "phonenumber": 9876543225
+  },
+  {
+    "id": "2007",
+    "name": "kay",
+    "age": 63,
+    "phonenumber": 987654388
   }
 ]

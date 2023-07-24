@@ -244,59 +244,44 @@ class Database{
       });
     }
     
-
-    createLink(databaseName, clusterName, sourceID, targetID) {
+    createLink(databaseName, clusterName, sourceID, targetIDs) {
       return new Promise((resolve, reject) => {
         try {
           const clusterPath = path.join(databaseName, `${clusterName}.json`);
-  
+    
           if (!fs.existsSync(clusterPath)) {
             throw new Error('Cluster does not exist in the database');
           }
-  
+    
           let clusterData = JSON.parse(fs.readFileSync(clusterPath, { encoding: 'utf8' }));
-  
-          // Find the source and target nodes in the cluster data
+    
+          // Find the source node in the cluster data
           const sourceNode = clusterData.find((node) => node.id === sourceID);
-          const targetNode = clusterData.find((node) => node.id === targetID);
-  
-          if (!sourceNode || !targetNode) {
-            throw new Error('Source or target node not found');
+    
+          if (!sourceNode) {
+            throw new Error('Source node not found');
           }
-  
-          // Add the link between the source and target nodes
-          // const link = {
-          //   source: sourceNode.id,
-          //   target: targetNode.id,
-          // };
-
-          // const link = [sourceNode.id,targetNode.id]
-  
-          // Add the link to the source node's links array
-          if (!sourceNode.links) {
-            sourceNode.links = [];
+    
+          // Add the one-to-many relationship property to the source node
+          if (!sourceNode.manyRelationship) {
+            sourceNode.manyRelationship = [];
           }
-          sourceNode.links.push(sourceNode.id,targetNode.id);
-  
-          // Add the link to the target node's links array
-          if (!targetNode.links) {
-            targetNode.links = [];
-          }
-          targetNode.links.push(sourceNode.id,targetNode.id);
-  
+    
+          // Add the target IDs to the one-to-many relationship array of the source node
+          targetIDs.forEach((targetID) => {
+            if (!sourceNode.manyRelationship.includes(targetID)) {
+              sourceNode.manyRelationship.push(targetID);
+            }
+          });
+    
           fs.writeFileSync(clusterPath, JSON.stringify(clusterData, null, 2));
-  
-          resolve('Link created successfully');
+    
+          resolve('One-to-many relationship created successfully');
         } catch (error) {
           reject(error);
         }
       });
     }
-
-   
-  
-
-   
 }
 
 
@@ -317,23 +302,23 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2003', name: 'suresh',age:17,phonenumber:9876543217,gender:'male'},false).then(()=>{
+// db.insert('users','agents',{id:'2007', name : 'kay',age : 63,phonenumber:987654388},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users','agents', '2005', '2004')
+// db.createLink('users', 'agents', '2004', ['2005','2006'])
 //   .then(() => {
-//     console.log('Link created successfully');
+//     console.log('One-to-many relationship created successfully');
 //   })
 //   .catch((error) => {
-//     console.error('Error creating link:', error);
+//     console.error('Error creating one-to-many relationship:', error);
 //   });
 
 
 // Query the data cluster:
-// db.Query('users','agents',(data)=>data)
+// db.Query('users','agents',(data)=>data.id === '2005')
 // .then((data)=>{
 //     console.log(data);
 // }).catch((err)=>{
@@ -341,16 +326,16 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'mukesh',{specid : '789'}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users','agents',(data)=>data.name === 'suresh').then(()=>{
+// db.delete('users','agents',(data)=>data.id === '2005').then(()=>{
 //     console.log('data deleted sucessfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.search('users','agents','2005').then((data)=>{
+// db.search('users','agents','2006').then((data)=>{
 //     console.log(data);
     
 // }).catch((err)=>{
