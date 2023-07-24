@@ -158,47 +158,59 @@ class Database{
 
     }
 
-    delete(databaseName, clustername, QUERY_FUNCTION){
-        return new Promise((resolve, reject) => {
-            const clusterpath = path.join(databaseName, `${clustername}.json`);
-            if (!fs.existsSync(clusterpath)) {
+    delete(databaseName, clustername, QUERY_FUNCTION) {
+      return new Promise((resolve, reject) => {
+          const clusterpath = path.join(databaseName, `${clustername}.json`);
+          if (!fs.existsSync(clusterpath)) {
               return reject(new Error('Cluster does not exist'));
-            }
-        
-            const readStream = fs.createReadStream(clusterpath);
-            let readData = '';
-        
-            readStream.on('data', chunk => {
+          }
+  
+          const readStream = fs.createReadStream(clusterpath);
+          let readData = '';
+  
+          readStream.on('data', chunk => {
               readData += chunk;
-            });
-        
-            readStream.on('end', () => {
-              let read;
-              try {
-                read = JSON.parse(readData);
-              } catch (err) {
-                return reject(new Error(`Error parsing data: ${err.message}`));
-              }
-        
-              const deleteQuery = read.filter(row => !QUERY_FUNCTION(row));
-              read = deleteQuery;
-        
-              const writeStream = fs.createWriteStream(clusterpath);
-              writeStream.write(JSON.stringify(read,null,2));
-              writeStream.end();
-              writeStream.on('finish', () => {
-                resolve('Data deleted successfully');
-              });
-              writeStream.on('error', error => {
-                reject(new Error(`Error deleting data: ${error.message}`));
-              });
-            });
-        
-            readStream.on('error', error => {
-              reject(new Error(`Error reading data: ${error.message}`));
-            });
           });
-    }
+  
+          readStream.on('end', () => {
+              try {
+                  let read = JSON.parse(readData);
+  
+                  // Filter out the data that meets the deletion criteria
+                  const deleteQuery = read.filter(row => !QUERY_FUNCTION(row));
+  
+                  // Find the IDs of the deleted data
+                  const deletedIDs = read.filter(row => QUERY_FUNCTION(row)).map(row => row.id);
+  
+                  // Remove any references to the deleted IDs from the many relationships
+                  deleteQuery.forEach(row => {
+                      if (row.manyRelationship) {
+                          row.manyRelationship = row.manyRelationship.filter(id => !deletedIDs.includes(id));
+                      }
+                  });
+  
+                  read = deleteQuery;
+  
+                  const writeStream = fs.createWriteStream(clusterpath);
+                  writeStream.write(JSON.stringify(read, null, 2));
+                  writeStream.end();
+                  writeStream.on('finish', () => {
+                      resolve('Data deleted successfully');
+                  });
+                  writeStream.on('error', error => {
+                      reject(new Error(`Error deleting data: ${error.message}`));
+                  });
+              } catch (err) {
+                  reject(new Error(`Error parsing JSON data: ${err.message}`));
+              }
+          });
+  
+          readStream.on('error', error => {
+              reject(new Error(`Error reading data: ${error.message}`));
+          });
+      });
+  }
+    
 
     search(databaseName, clustername, searchElement) {
       return new Promise((resolve, reject) => {
@@ -302,13 +314,13 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2007', name : 'kay',age : 63,phonenumber:987654388},false).then(()=>{
+// db.insert('users','agents',{id:'2007', name : 'sehul',age : 44,phonenumber:987654360},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users', 'agents', '2004', ['2005','2006'])
+// db.createLink('users', 'agents', '2004', ['2005','2007'])
 //   .then(() => {
 //     console.log('One-to-many relationship created successfully');
 //   })
@@ -318,7 +330,7 @@ const db = new Database()
 
 
 // Query the data cluster:
-// db.Query('users','agents',(data)=>data.id === '2005')
+// db.Query('users','agents',(data)=>data.id === '2004')
 // .then((data)=>{
 //     console.log(data);
 // }).catch((err)=>{
@@ -329,13 +341,15 @@ const db = new Database()
 // db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users','agents',(data)=>data.id === '2005').then(()=>{
-//     console.log('data deleted sucessfully');
-// }).catch((err)=>{
+// db.delete('users', 'agents', (data) => data.id === '2007')
+//   .then(() => {
+//       console.log('deleted success');
+//   })
+//   .catch((err) => {
 //     console.log(err);
-// })
+//   });
 
-// db.search('users','agents','2006').then((data)=>{
+// db.search('users','agents','200').then((data)=>{
 //     console.log(data);
     
 // }).catch((err)=>{
