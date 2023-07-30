@@ -258,32 +258,47 @@ class Database{
         return new Promise((resolve, reject) => {
           try {
             const clusterPath = path.join(databaseName, `${clusterName}.json`);
-    
+      
             if (!fs.existsSync(clusterPath)) {
               throw new Error('Cluster does not exist in the database');
             }
-    
+      
             let clusterData = JSON.parse(fs.readFileSync(clusterPath, { encoding: 'utf8' }));
-    
+      
             // Find the source node in the cluster data
             const sourceNode = clusterData.find((node) => node.id === sourceID);
-    
+      
             if (!sourceNode) {
               throw new Error('Source node not found');
             }
-    
+      
             // Add the one-to-many relationship property to the source node
             if (!sourceNode.manyRelationship) {
               sourceNode.manyRelationship = [];
             }
-    
+      
             // Add the target IDs to the one-to-many relationship array of the source node
             targetIDs.forEach((targetID) => {
               if (!sourceNode.manyRelationship.includes(targetID)) {
                 sourceNode.manyRelationship.push(targetID);
               }
+      
+              // Find the target node in the cluster data
+              const targetNode = clusterData.find((node) => node.id === targetID);
+      
+              if (targetNode) {
+                // Add the one-to-many relationship property to the target node
+                if (!targetNode.manyRelationship) {
+                  targetNode.manyRelationship = [];
+                }
+      
+                // Add the sourceID to the one-to-many relationship array of the target node
+                if (!targetNode.manyRelationship.includes(sourceID)) {
+                  targetNode.manyRelationship.push(sourceID);
+                }
+              }
             });
-    
+      
             // Perform batch write to update the cluster data
             this.batchWriteData(clusterPath, clusterData)
               .then(() => resolve('One-to-many relationship created successfully'))
@@ -315,13 +330,13 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2003', name : 'mehel',age : 20,phonenumber:987654210},false).then(()=>{
+// db.insert('users','agents',{id:'2007', name : 'mehul',age : 25,phonenumber:987654232},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users', 'agents', '2003', ['2004','2007'])
+// db.createLink('users', 'agents', '2004', ['2007'])
 //   .then(() => {
 //     console.log('One-to-many relationship created successfully');
 //   })
@@ -339,10 +354,10 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'mehel',{id : "2006"}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users', 'agents', (data) => data.id === '2007')
+// db.delete('users', 'agents', (data) => data.name === 'mehul')
 //   .then(() => {
 //       console.log('deleted success');
 //   })
