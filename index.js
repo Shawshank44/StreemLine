@@ -187,8 +187,8 @@ class Database{
     
               // Remove any references to the deleted IDs from the many relationships
               deleteQuery.forEach((row) => {
-                if (row.manyRelationship) {
-                  row.manyRelationship = row.manyRelationship.filter((id) => !deletedIDs.includes(id));
+                if (row.manyToManyRelationship) {
+                  row.manyToManyRelationship = row.manyToManyRelationship.filter((id) => !deletedIDs.includes(id));
                 }
               });
     
@@ -254,7 +254,7 @@ class Database{
       });
     }
     
-    createLink(databaseName, clusterName, sourceID, targetIDs) {
+    createLink(databaseName, clusterName, sourceIDs, targetIDs) {
         return new Promise((resolve, reject) => {
           try {
             const clusterPath = path.join(databaseName, `${clusterName}.json`);
@@ -265,49 +265,54 @@ class Database{
       
             let clusterData = JSON.parse(fs.readFileSync(clusterPath, { encoding: 'utf8' }));
       
-            // Find the source node in the cluster data
-            const sourceNode = clusterData.find((node) => node.id === sourceID);
+            // Function to find a node by its ID in the cluster data
+            const findNodeById = (id) => clusterData.find((node) => node.id === id);
       
-            if (!sourceNode) {
-              throw new Error('Source node not found');
-            }
+            sourceIDs.forEach((sourceID) => {
+              // Find the source node in the cluster data
+              const sourceNode = findNodeById(sourceID);
       
-            // Add the one-to-many relationship property to the source node
-            if (!sourceNode.manyRelationship) {
-              sourceNode.manyRelationship = [];
-            }
-      
-            // Add the target IDs to the one-to-many relationship array of the source node
-            targetIDs.forEach((targetID) => {
-              if (!sourceNode.manyRelationship.includes(targetID)) {
-                sourceNode.manyRelationship.push(targetID);
+              if (!sourceNode) {
+                throw new Error(`Source node with ID ${sourceID} not found`);
               }
       
-              // Find the target node in the cluster data
-              const targetNode = clusterData.find((node) => node.id === targetID);
-      
-              if (targetNode) {
-                // Add the one-to-many relationship property to the target node
-                if (!targetNode.manyRelationship) {
-                  targetNode.manyRelationship = [];
-                }
-      
-                // Add the sourceID to the one-to-many relationship array of the target node
-                if (!targetNode.manyRelationship.includes(sourceID)) {
-                  targetNode.manyRelationship.push(sourceID);
-                }
+              // Add the many-to-many relationship property to the source node
+              if (!sourceNode.manyToManyRelationship) {
+                sourceNode.manyToManyRelationship = [];
               }
+      
+              // Add the target IDs to the many-to-many relationship array of the source node
+              targetIDs.forEach((targetID) => {
+                if (!sourceNode.manyToManyRelationship.includes(targetID)) {
+                  sourceNode.manyToManyRelationship.push(targetID);
+      
+                  // Find the target node in the cluster data
+                  const targetNode = findNodeById(targetID);
+      
+                  if (targetNode) {
+                    // Add the many-to-many relationship property to the target node
+                    if (!targetNode.manyToManyRelationship) {
+                      targetNode.manyToManyRelationship = [];
+                    }
+      
+                    // Add the sourceID to the many-to-many relationship array of the target node
+                    if (!targetNode.manyToManyRelationship.includes(sourceID)) {
+                      targetNode.manyToManyRelationship.push(sourceID);
+                    }
+                  }
+                }
+              });
             });
       
             // Perform batch write to update the cluster data
             this.batchWriteData(clusterPath, clusterData)
-              .then(() => resolve('One-to-many relationship created successfully'))
+              .then(() => resolve('Many-to-many relationships created successfully'))
               .catch((err) => reject(new Error(`Failed to write to cluster file: ${err.message}`)));
           } catch (error) {
             reject(error);
           }
         });
-      }
+    }
     
 
 }
@@ -330,15 +335,15 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2007', name : 'mehul',age : 25,phonenumber:987654232},false).then(()=>{
+// db.insert('users','agents',{id:'2005', name : 'sehul',age : 24,phonenumber:987654259},true).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users', 'agents', '2004', ['2007'])
+// db.createLink('users', 'agents', ['2004'], ['2005'])
 //   .then(() => {
-//     console.log('One-to-many relationship created successfully');
+//     console.log('many-to-many relationship created successfully');
 //   })
 //   .catch((error) => {
 //     console.error('Error creating one-to-many relationship:', error);
@@ -346,7 +351,7 @@ const db = new Database()
 
 
 // Query the data cluster:
-// db.Query('users','agents',(data)=>data.id === '2004')
+// db.Query('users','agents',(data)=>data.id === "2004")
 // .then((data)=>{
 //     console.log(data);
 // }).catch((err)=>{
@@ -357,7 +362,7 @@ const db = new Database()
 // db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users', 'agents', (data) => data.name === 'mehul')
+// db.delete('users', 'agents', (data) => data.name === 'sehul')
 //   .then(() => {
 //       console.log('deleted success');
 //   })
@@ -365,7 +370,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users','agents','2004').then((data)=>{
+// db.search('users','agents','2009').then((data)=>{
 //     console.log(data);
     
 // }).catch((err)=>{

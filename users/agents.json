@@ -1,29 +1,49 @@
 [
   {
-    "id": "2003",
-    "name": "mehel",
-    "age": 20,
-    "phonenumber": 987654210,
-    "manyRelationship": [
-      "2004"
-    ]
-  },
-  {
     "id": "2004",
     "name": "shashank",
     "age": 22,
     "phonenumber": 987654210,
-    "manyRelationship": [
-      "2003",
-      "2006"
+    "manyToManyRelationship": [
+      "2007",
+      "2006",
+      "2008",
+      "2009"
     ]
   },
   {
     "id": "2006",
     "name": "rehul",
-    "age": 23,
-    "phonenumber": 987654231,
-    "manyRelationship": [
+    "age": 20,
+    "phonenumber": 987654291,
+    "manyToManyRelationship": [
+      "2004"
+    ]
+  },
+  {
+    "id": "2007",
+    "name": "mehul",
+    "age": 19,
+    "phonenumber": 987654294,
+    "manyToManyRelationship": [
+      "2004"
+    ]
+  },
+  {
+    "id": "2008",
+    "name": "jehul",
+    "age": 26,
+    "phonenumber": 987654293,
+    "manyToManyRelationship": [
+      "2004"
+    ]
+  },
+  {
+    "id": "2009",
+    "name": "fehul",
+    "age": 28,
+    "phonenumber": 987654256,
+    "manyToManyRelationship": [
       "2004"
     ]
   }
