@@ -335,13 +335,13 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2005', name : 'sehul',age : 24,phonenumber:987654259},true).then(()=>{
+// db.insert('users','agents',{id:'2009', name : 'jehul',age : 27,phonenumber:987654204},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users', 'agents', ['2004'], ['2005'])
+// db.createLink('users', 'agents', ['2004'], ['2006'])
 //   .then(() => {
 //     console.log('many-to-many relationship created successfully');
 //   })
@@ -370,7 +370,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users','agents','2009').then((data)=>{
+// db.search('users','agents','2008').then((data)=>{
 //     console.log(data);
     
 // }).catch((err)=>{
