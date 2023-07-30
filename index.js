@@ -99,31 +99,80 @@ class Database{
         });
       }
 
-    Query(databasename, clustername, QUERY_FUNCTION){
+
+      Query(databasename, clustername, QUERY_FUNCTION, options = {}) {
+        const clusterpath = path.join(databasename, `${clustername}.json`);
+        if (!fs.existsSync(clusterpath)) {
+          return Promise.reject(new Error('Cluster does not exist in the database'));
+        }
+    
         return new Promise((resolve, reject) => {
-            try {
-              const clusterpath = path.join(databasename, `${clustername}.json`);
-              if (!fs.existsSync(clusterpath)) {
-                return reject(new Error('Cluster does not exist in the database'));
-              }
-              const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
-              let datastr = '';
-              readstream.on('data', (chunk) => {
-                datastr += chunk;
-              });
-              readstream.on('end', () => {
-                const read = JSON.parse(datastr);
-                const queries = read.filter(QUERY_FUNCTION);
-                resolve(queries);
-              });
-              readstream.on('error', (err) => {
-                reject(new Error(`Error reading data: ${err.message}`));
-              });
-            } catch (error) {
-              reject(error);
-            }
+          const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
+          let datastr = '';
+          readstream.on('data', (chunk) => {
+            datastr += chunk;
           });
-    }
+          readstream.on('end', () => {
+            const read = JSON.parse(datastr);
+            let queries = read.filter(QUERY_FUNCTION);
+    
+            // Aggregation: Calculate the sum of a numeric field
+            if (options.aggregate === 'sum' && options.aggregateField) {
+              const sum = queries.reduce((acc, obj) => acc + obj[options.aggregateField], 0);
+              resolve(sum);
+              return;
+            }
+    
+            // Aggregation: Calculate the average of a numeric field
+            if (options.aggregate === 'average' && options.aggregateField) {
+              const sum = queries.reduce((acc, obj) => acc + obj[options.aggregateField], 0);
+              const average = sum / queries.length;
+              resolve(average);
+              return;
+            }
+    
+            // Sorting
+            if (options.sortBy) {
+              queries.sort((a, b) => {
+                if (options.sortOrder === 'desc') {
+                  return b[options.sortBy].localeCompare(a[options.sortBy]);
+                }
+                return a[options.sortBy].localeCompare(b[options.sortBy]);
+              });
+            }
+    
+            // Pagination
+            if (options.page && options.pageSize) {
+              const startIndex = (options.page - 1) * options.pageSize;
+              const endIndex = startIndex + options.pageSize;
+              queries = queries.slice(startIndex, endIndex);
+            }
+    
+            // Query Projection
+            if (options.fields) {
+              queries = queries.map((obj) => {
+                const projectedObj = {};
+                options.fields.forEach((field) => {
+                  projectedObj[field] = obj[field];
+                });
+                return projectedObj;
+              });
+            }
+    
+            // Limit number of results
+            if (options.limit) {
+              queries = queries.slice(0, options.limit);
+            }
+    
+            resolve(queries);
+          });
+          readstream.on('error', (err) => {
+            reject(new Error(`Error reading data: ${err.message}`));
+          });
+        });
+      }
+
+    
     update(databasename, clustername, QUERY_FUNCTION, updatedData) {
         return new Promise((resolve, reject) => {
           const clusterpath = path.join(databasename, `${clustername}.json`);
@@ -210,49 +259,57 @@ class Database{
       }
     
 
-    search(databaseName, clustername, searchElement) {
-      return new Promise((resolve, reject) => {
+      search(databaseName, clustername, searchElement, searchFields, caseInsensitive = true, useRegex = false) {
+        return new Promise((resolve, reject) => {
           const clusterpath = path.join(databaseName, `${clustername}.json`);
           if (!fs.existsSync(clusterpath)) {
-              return reject(new Error('Cluster does not exist'));
+            return reject(new Error('Cluster does not exist'));
           }
-  
+      
           const readStream = fs.createReadStream(clusterpath);
           readStream.on('error', error => reject(new Error(`Error reading data: ${error.message}`)));
-  
+      
           let readData = '';
           readStream.on('data', chunk => {
-              readData += chunk;
+            readData += chunk;
           });
-  
+      
           readStream.on('end', () => {
-              try {
-                  let read = JSON.parse(readData);
-                  const results = read.filter(obj => {
-                      const values = Object.values(obj);
-                      for (let i = 0; i < values.length; i++) {
-                          if (Array.isArray(values[i])) { // Check if value is an array
-                              // Search within the array
-                              for (let j = 0; j < values[i].length; j++) {
-                                  if ((typeof values[i][j] === "string" || typeof values[i][j] === "number") && String(values[i][j]).includes(searchElement)) {
-                                      return true;
-                                  }
-                              }
-                          } else {
-                              if ((typeof values[i] === "string" || typeof values[i] === "number") && String(values[i]).includes(searchElement)) {
-                                  return true;
-                              }
-                          }
+            try {
+              let read = JSON.parse(readData);
+              const results = read.filter(obj => {
+                for (const field of searchFields) {
+                  const value = obj[field];
+                  if (value) {
+                    let strToMatch = String(value);
+                    if (caseInsensitive) {
+                      strToMatch = strToMatch.toLowerCase();
+                      searchElement = searchElement.toLowerCase();
+                    }
+                    if (useRegex) {
+                      const regex = new RegExp(searchElement);
+                      if (regex.test(strToMatch)) {
+                        return true;
                       }
-                      return false;
-                  });
-                  resolve(results);
-              } catch (error) {
-                  reject(new Error(`Error parsing JSON data: ${error.message}`));
-              }
+                    } else {
+                      if (strToMatch.includes(searchElement)) {
+                        return true;
+                      }
+                    }
+                  }
+                }
+                return false;
+              });
+              resolve(results);
+            } catch (error) {
+              reject(new Error(`Error parsing JSON data: ${error.message}`));
+            }
           });
-      });
-    }
+        });
+      }
+    
+
+
     
     createLink(databaseName, clusterName, sourceIDs, targetIDs) {
         return new Promise((resolve, reject) => {
@@ -351,7 +408,7 @@ const db = new Database()
 
 
 // Query the data cluster:
-// db.Query('users','agents',(data)=>data.id === "2004")
+// db.Query('users','agents',(data)=>data.age  < 25,{sortBy : 'name'})
 // .then((data)=>{
 //     console.log(data);
 // }).catch((err)=>{
@@ -370,11 +427,11 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users','agents','2008').then((data)=>{
+// db.search('users', 'agents', '2004', ['id','name','age'], true, true)
+//   .then(data => {
 //     console.log(data);
-    
-// }).catch((err)=>{
+//   })
+//   .catch(err => {
 //     console.log(err);
-// })
-
+//   });
 
