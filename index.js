@@ -386,98 +386,6 @@ class Database{
           });
         });
       }
-
-
-      createRelationship(databaseName, sourceCluster, targetCluster, sourceIDs, targetIDs) {
-        return new Promise((resolve, reject) => {
-          try {
-            const sourceClusterPath = path.join(databaseName, `${sourceCluster}.json`);
-            const targetClusterPath = path.join(databaseName, `${targetCluster}.json`);
-    
-            if (!fs.existsSync(sourceClusterPath) || !fs.existsSync(targetClusterPath)) {
-              throw new Error('Source or target cluster does not exist in the database');
-            }
-    
-            const readAndProcessData = (clusterPath) => {
-              return new Promise((resolve, reject) => {
-                const readStream = fs.createReadStream(clusterPath, { encoding: 'utf8' });
-                let datastr = '';
-    
-                readStream.on('data', (chunk) => {
-                  datastr += chunk;
-                });
-    
-                readStream.on('end', () => {
-                  try {
-                    const clusterData = JSON.parse(datastr);
-                    resolve(clusterData);
-                  } catch (error) {
-                    reject(error);
-                  }
-                });
-    
-                readStream.on('error', (err) => {
-                  reject(err);
-                });
-              });
-            };
-    
-            Promise.all([readAndProcessData(sourceClusterPath), readAndProcessData(targetClusterPath)])
-              .then(([sourceClusterData, targetClusterData]) => {
-                const findNodeById = (clusterData, id) => clusterData.find((node) => node.id === id);
-    
-                sourceIDs.forEach((sourceID) => {
-                  const sourceNode = findNodeById(sourceClusterData, sourceID);
-    
-                  if (!sourceNode) {
-                    throw new Error(`Source node with ID ${sourceID} not found in ${sourceCluster}`);
-                  }
-    
-                  if (!sourceNode.relationships) {
-                    sourceNode.relationships = [];
-                  }
-    
-                  targetIDs.forEach((targetID) => {
-                    const targetNode = findNodeById(targetClusterData, targetID);
-    
-                    if (!targetNode) {
-                      throw new Error(`Target node with ID ${targetID} not found in ${targetCluster}`);
-                    }
-    
-                    if (!sourceNode.relationships.some((relation) => relation.targetCluster === targetCluster && relation.targetID === targetID)) {
-                      sourceNode.relationships.push({
-                        targetCluster,
-                        targetID,
-                      });
-    
-                      if (!targetNode.relationships) {
-                        targetNode.relationships = [];
-                      }
-    
-                      if (!targetNode.relationships.some((relation) => relation.targetCluster === sourceCluster && relation.targetID === sourceID)) {
-                        targetNode.relationships.push({
-                          targetCluster: sourceCluster,
-                          targetID: sourceID,
-                        });
-                      }
-                    }
-                  });
-                });
-    
-                return Promise.all([
-                  this.batchWriteData(sourceClusterPath, sourceClusterData),
-                  this.batchWriteData(targetClusterPath, targetClusterData),
-                ]);
-              })
-              .then(() => resolve('Relationships created successfully'))
-              .catch((err) => reject(new Error(`Failed to create relationships: ${err.message}`)));
-          } catch (error) {
-            reject(error);
-          }
-        });
-      }
-    
-
 }
 
 
@@ -491,27 +399,20 @@ const db = new Database()
 // })
 
 // creating the cluster
-// db.createCluster('users','orders').then(()=>{
+// db.createCluster('users','agents').then(()=>{
 //     console.log('cluster created');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2008', name : 'xehul',age : 28,phonenumber:987654237},false).then(()=>{
+// db.insert('users','agents',{id:'2010', name : 'sehul',age : 40,phonenumber:987654110},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// order :
-// db.insert('users','orders',{prodid: '6655', prodname : 'x-chips',lifeline : 65},false).then(()=>{
-//   console.log('data inserted successfully');
-// }).catch((err)=>{
-//   console.log(err);
-// })
-
-// db.createLink('users', 'agents', ['2004','2003'], ['2006','2005'])
+// db.createLink('users', 'agents', ['2004','2003'], ['2006','2008','2010'])
 //   .then(() => {
 //     console.log('many-to-many relationship created successfully');
 //   })
@@ -540,7 +441,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users', 'agents', '2004', ['id','name','age'], true, true)
+// db.search('users', 'agents', '20', ['id','name','age'], true, true)
 //   .then(data => {
 //     console.log(data);
 //   })
@@ -548,10 +449,4 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.createRelationship('users', 'agents','orders', ['2006'],['3425'])
-//   .then(() => {
-//     console.log('Relationship created successfully');
-//   })
-//   .catch((error) => {
-//     console.error('Error creating relationships:', error);
-//   });
+

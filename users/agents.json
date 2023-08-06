@@ -1,58 +1,60 @@
 [
   {
     "id": "2003",
-    "name": "rehul",
-    "age": 22,
-    "phonenumber": 987654210,
+    "name": "suresh",
+    "age": 20,
+    "phonenumber": 987654280,
     "manyToManyRelationship": [
-      "2006"
+      "2006",
+      "2008"
     ]
   },
   {
     "id": "2004",
     "name": "shashank",
     "age": 22,
-    "phonenumber": 987654244,
+    "phonenumber": 987654210,
     "manyToManyRelationship": [
-      "2006"
-    ],
-    "relationships": [
-      {
-        "targetCluster": "orders",
-        "targetID": "4368"
-      }
+      "2006",
+      "2008"
     ]
   },
   {
-    "id": "2006",
-    "name": "jehul",
+    "id": "2005",
+    "name": "rehul",
     "age": 24,
-    "phonenumber": 987654228,
+    "phonenumber": 987654224
+  },
+  {
+    "id": "2006",
+    "name": "mehul",
+    "age": 27,
+    "phonenumber": 987654230,
     "manyToManyRelationship": [
       "2004",
       "2003"
-    ],
-    "relationships": [
-      {
-        "targetCluster": "orders",
-        "targetID": "4368"
-      },
-      {
-        "targetCluster": "orders",
-        "targetID": "3425"
-      }
     ]
   },
   {
     "id": "2007",
-    "name": "mehul",
-    "age": 26,
-    "phonenumber": 987654238
+    "name": "jehul",
+    "age": 37,
+    "phonenumber": 987654278
   },
   {
     "id": "2008",
-    "name": "xehul",
-    "age": 28,
-    "phonenumber": 987654237
+    "name": "rahul",
+    "age": 24,
+    "phonenumber": 987654280,
+    "manyToManyRelationship": [
+      "2004",
+      "2003"
+    ]
+  },
+  {
+    "id": "2009",
+    "name": "rahims",
+    "age": 23,
+    "phonenumber": 987654220
   }
 ]
