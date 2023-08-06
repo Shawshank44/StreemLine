@@ -308,68 +308,174 @@ class Database{
         });
       }
     
-
-
-    
-    createLink(databaseName, clusterName, sourceIDs, targetIDs) {
+      createLink(databaseName, clusterName, sourceIDs, targetIDs) {
         return new Promise((resolve, reject) => {
-          try {
-            const clusterPath = path.join(databaseName, `${clusterName}.json`);
+          const clusterPath = path.join(databaseName, `${clusterName}.json`);
       
-            if (!fs.existsSync(clusterPath)) {
-              throw new Error('Cluster does not exist in the database');
-            }
+          if (!fs.existsSync(clusterPath)) {
+            return reject(new Error('Cluster does not exist in the database'));
+          }
       
-            let clusterData = JSON.parse(fs.readFileSync(clusterPath, { encoding: 'utf8' }));
+          const readStream = fs.createReadStream(clusterPath, { encoding: 'utf8' });
+          let clusterData = '';
       
-            // Function to find a node by its ID in the cluster data
-            const findNodeById = (id) => clusterData.find((node) => node.id === id);
+          readStream.on('data', (chunk) => {
+            clusterData += chunk;
+          });
       
-            sourceIDs.forEach((sourceID) => {
-              // Find the source node in the cluster data
-              const sourceNode = findNodeById(sourceID);
+          readStream.on('end', () => {
+            try {
+              clusterData = JSON.parse(clusterData);
       
-              if (!sourceNode) {
-                throw new Error(`Source node with ID ${sourceID} not found`);
-              }
+              // Function to find a node by its ID in the cluster data
+              const findNodeById = (id) => clusterData.find((node) => node.id === id);
       
-              // Add the many-to-many relationship property to the source node
-              if (!sourceNode.manyToManyRelationship) {
-                sourceNode.manyToManyRelationship = [];
-              }
+              sourceIDs.forEach((sourceID) => {
+                // Find the source node in the cluster data
+                const sourceNode = findNodeById(sourceID);
       
-              // Add the target IDs to the many-to-many relationship array of the source node
-              targetIDs.forEach((targetID) => {
-                if (!sourceNode.manyToManyRelationship.includes(targetID)) {
-                  sourceNode.manyToManyRelationship.push(targetID);
+                if (!sourceNode) {
+                  throw new Error(`Source node with ID ${sourceID} not found`);
+                }
       
-                  // Find the target node in the cluster data
-                  const targetNode = findNodeById(targetID);
+                // Add the many-to-many relationship property to the source node
+                if (!sourceNode.manyToManyRelationship) {
+                  sourceNode.manyToManyRelationship = [];
+                }
       
-                  if (targetNode) {
-                    // Add the many-to-many relationship property to the target node
-                    if (!targetNode.manyToManyRelationship) {
-                      targetNode.manyToManyRelationship = [];
-                    }
+                // Add the target IDs to the many-to-many relationship array of the source node
+                targetIDs.forEach((targetID) => {
+                  if (!sourceNode.manyToManyRelationship.includes(targetID)) {
+                    sourceNode.manyToManyRelationship.push(targetID);
       
-                    // Add the sourceID to the many-to-many relationship array of the target node
-                    if (!targetNode.manyToManyRelationship.includes(sourceID)) {
-                      targetNode.manyToManyRelationship.push(sourceID);
+                    // Find the target node in the cluster data
+                    const targetNode = findNodeById(targetID);
+      
+                    if (targetNode) {
+                      // Add the many-to-many relationship property to the target node
+                      if (!targetNode.manyToManyRelationship) {
+                        targetNode.manyToManyRelationship = [];
+                      }
+      
+                      // Add the sourceID to the many-to-many relationship array of the target node
+                      if (!targetNode.manyToManyRelationship.includes(sourceID)) {
+                        targetNode.manyToManyRelationship.push(sourceID);
+                      }
                     }
                   }
-                }
+                });
               });
-            });
       
-            // Perform batch write to update the cluster data
-            this.batchWriteData(clusterPath, clusterData)
-              .then(() => resolve('Many-to-many relationships created successfully'))
-              .catch((err) => reject(new Error(`Failed to write to cluster file: ${err.message}`)));
+              // Perform batch write to update the cluster data using streams
+              const writeStream = fs.createWriteStream(clusterPath, { encoding: 'utf8' });
+              writeStream.write(JSON.stringify(clusterData, null, 2));
+              writeStream.end(() => {
+                resolve('Many-to-many relationships created successfully');
+              });
+      
+              writeStream.on('error', (err) => {
+                reject(new Error(`Failed to write to cluster file: ${err.message}`));
+              });
+            } catch (error) {
+              reject(error);
+            }
+          });
+      
+          readStream.on('error', (error) => {
+            reject(new Error(`Error reading data: ${error.message}`));
+          });
+        });
+      }
+
+
+      createRelationship(databaseName, sourceCluster, targetCluster, sourceIDs, targetIDs) {
+        return new Promise((resolve, reject) => {
+          try {
+            const sourceClusterPath = path.join(databaseName, `${sourceCluster}.json`);
+            const targetClusterPath = path.join(databaseName, `${targetCluster}.json`);
+    
+            if (!fs.existsSync(sourceClusterPath) || !fs.existsSync(targetClusterPath)) {
+              throw new Error('Source or target cluster does not exist in the database');
+            }
+    
+            const readAndProcessData = (clusterPath) => {
+              return new Promise((resolve, reject) => {
+                const readStream = fs.createReadStream(clusterPath, { encoding: 'utf8' });
+                let datastr = '';
+    
+                readStream.on('data', (chunk) => {
+                  datastr += chunk;
+                });
+    
+                readStream.on('end', () => {
+                  try {
+                    const clusterData = JSON.parse(datastr);
+                    resolve(clusterData);
+                  } catch (error) {
+                    reject(error);
+                  }
+                });
+    
+                readStream.on('error', (err) => {
+                  reject(err);
+                });
+              });
+            };
+    
+            Promise.all([readAndProcessData(sourceClusterPath), readAndProcessData(targetClusterPath)])
+              .then(([sourceClusterData, targetClusterData]) => {
+                const findNodeById = (clusterData, id) => clusterData.find((node) => node.id === id);
+    
+                sourceIDs.forEach((sourceID) => {
+                  const sourceNode = findNodeById(sourceClusterData, sourceID);
+    
+                  if (!sourceNode) {
+                    throw new Error(`Source node with ID ${sourceID} not found in ${sourceCluster}`);
+                  }
+    
+                  if (!sourceNode.relationships) {
+                    sourceNode.relationships = [];
+                  }
+    
+                  targetIDs.forEach((targetID) => {
+                    const targetNode = findNodeById(targetClusterData, targetID);
+    
+                    if (!targetNode) {
+                      throw new Error(`Target node with ID ${targetID} not found in ${targetCluster}`);
+                    }
+    
+                    if (!sourceNode.relationships.some((relation) => relation.targetCluster === targetCluster && relation.targetID === targetID)) {
+                      sourceNode.relationships.push({
+                        targetCluster,
+                        targetID,
+                      });
+    
+                      if (!targetNode.relationships) {
+                        targetNode.relationships = [];
+                      }
+    
+                      if (!targetNode.relationships.some((relation) => relation.targetCluster === sourceCluster && relation.targetID === sourceID)) {
+                        targetNode.relationships.push({
+                          targetCluster: sourceCluster,
+                          targetID: sourceID,
+                        });
+                      }
+                    }
+                  });
+                });
+    
+                return Promise.all([
+                  this.batchWriteData(sourceClusterPath, sourceClusterData),
+                  this.batchWriteData(targetClusterPath, targetClusterData),
+                ]);
+              })
+              .then(() => resolve('Relationships created successfully'))
+              .catch((err) => reject(new Error(`Failed to create relationships: ${err.message}`)));
           } catch (error) {
             reject(error);
           }
         });
-    }
+      }
     
 
 }
@@ -385,20 +491,27 @@ const db = new Database()
 // })
 
 // creating the cluster
-// db.createCluster('users','agents').then(()=>{
+// db.createCluster('users','orders').then(()=>{
 //     console.log('cluster created');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2009', name : 'jehul',age : 27,phonenumber:987654204},false).then(()=>{
+// db.insert('users','agents',{id:'2008', name : 'xehul',age : 28,phonenumber:987654237},false).then(()=>{
 //     console.log('data inserted successfully');
 // }).catch((err)=>{
 //     console.log(err);
 // })
 
-// db.createLink('users', 'agents', ['2004'], ['2006'])
+// order :
+// db.insert('users','orders',{prodid: '6655', prodname : 'x-chips',lifeline : 65},false).then(()=>{
+//   console.log('data inserted successfully');
+// }).catch((err)=>{
+//   console.log(err);
+// })
+
+// db.createLink('users', 'agents', ['2004','2003'], ['2006','2005'])
 //   .then(() => {
 //     console.log('many-to-many relationship created successfully');
 //   })
@@ -435,3 +548,10 @@ const db = new Database()
 //     console.log(err);
 //   });
 
+// db.createRelationship('users', 'agents','orders', ['2006'],['3425'])
+//   .then(() => {
+//     console.log('Relationship created successfully');
+//   })
+//   .catch((error) => {
+//     console.error('Error creating relationships:', error);
+//   });
