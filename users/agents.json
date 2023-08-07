@@ -56,5 +56,18 @@
     "name": "rahims",
     "age": 23,
     "phonenumber": 987654220
+  },
+  {
+    "id": "2011",
+    "name": "kehul",
+    "age": 70,
+    "phonenumber": 987654118
+  },
+  {
+    "id": "2011",
+    "name": "kehul",
+    "age": 72,
+    "phonenumber": 987654118,
+    "duplicate": true
   }
 ]

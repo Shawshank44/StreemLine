@@ -61,35 +61,40 @@ class Database{
         });
       }
 
-      insert(databasename, clustername, data, allowDuplicates = false) {
+      insert(databasename, clustername, data, allowDuplicates = false, uniqueFields = []) {
         return new Promise((resolve, reject) => {
           try {
             const clusterpath = path.join(databasename, `${clustername}.json`);
             if (!fs.existsSync(clusterpath)) {
               return reject(new Error('Cluster does not exist in the database'));
             }
+      
             const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
             let datastr = '';
             readstream.on('data', (chunk) => {
               datastr += chunk;
             });
-    
+      
             readstream.on('end', () => {
               const read = JSON.parse(datastr);
-              const isduplicate = read.some((item) => {
-                return JSON.stringify(item) === JSON.stringify(data);
+              const isDuplicate = read.some((item) => {
+                return uniqueFields.every((field) => item[field] === data[field]);
               });
-    
-              if (!isduplicate || allowDuplicates) {
-                read.push(data);
-                this.batchWriteData(clusterpath, read)
-                  .then(() => resolve())
-                  .catch((err) => reject(new Error(`Failed to write to cluster file: ${err.message}`)));
-              } else {
-                return resolve();
+      
+              if (isDuplicate) {
+                if (allowDuplicates) {
+                  data.duplicate = true;
+                } else {
+                  return reject(new Error('Duplicate data found'));
+                }
               }
+      
+              read.push(data);
+              this.batchWriteData(clusterpath, read)
+                .then(() => resolve())
+                .catch((err) => reject(new Error(`Failed to write to cluster file: ${err.message}`)));
             });
-    
+      
             readstream.on('error', (err) => {
               return reject(new Error(`Failed to read cluster file: ${err.message}`));
             });
@@ -406,11 +411,15 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users','agents',{id:'2010', name : 'sehul',age : 40,phonenumber:987654110},false).then(()=>{
+// db.insert('users', 'agents', { id: '2011', name: 'kehul', age: 72, phonenumber: 987654118},false,   ['id','name','phonenumber'])
+//   .then(() => {
 //     console.log('data inserted successfully');
-// }).catch((err)=>{
+//   })
+//   .catch((err) => {
 //     console.log(err);
-// })
+//   });
+
+
 
 // db.createLink('users', 'agents', ['2004','2003'], ['2006','2008','2010'])
 //   .then(() => {
@@ -433,7 +442,7 @@ const db = new Database()
 // db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users', 'agents', (data) => data.name === 'sehul')
+// db.delete('users', 'agents', (data) => data.age === 71)
 //   .then(() => {
 //       console.log('deleted success');
 //   })
