@@ -61,6 +61,27 @@ class Database{
         });
       }
 
+      batchReadData(clusterpath) {
+        return new Promise((resolve, reject) => {
+            const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
+            let datastr = '';
+            readstream.on('data', (chunk) => {
+                datastr += chunk;
+            });
+            readstream.on('end', () => {
+                try {
+                    const read = JSON.parse(datastr);
+                    resolve(read);
+                } catch (error) {
+                    reject(new Error(`Failed to parse cluster file: ${error.message}`));
+                }
+            });
+            readstream.on('error', (err) => {
+                reject(new Error(`Failed to read cluster file: ${err.message}`));
+            });
+        });
+    }
+
       insert(databasename, clustername, data, allowDuplicates = false, uniqueFields = []) {
         return new Promise((resolve, reject) => {
           try {
