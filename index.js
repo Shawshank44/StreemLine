@@ -81,17 +81,13 @@ class Database{
         });
     }
 
-    
     batchReadData(clusterpath) {
         return new Promise((resolve, reject) => {
             const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
             let datastr = '';
     
-            readstream.on('readable', () => {
-                let chunk;
-                while ((chunk = readstream.read()) !== null) {
-                    datastr += chunk;
-                }
+            readstream.on('data', chunk => {
+                datastr += chunk;
             });
     
             readstream.on('end', () => {
@@ -108,6 +104,7 @@ class Database{
             });
         });
     }
+    
 
     insert(databasename, clustername, data, allowDuplicates = false, uniqueFields = []) {
       return new Promise((resolve, reject) => {
@@ -404,7 +401,7 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'shashank',{age : 22}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'shashank',{key : 765}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
 // db.delete('users', 'agents', (data) => data.name === 'ronny')
@@ -415,7 +412,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users', 'agents', '200', ['id','name','age'], true, true)
+// db.search('users', 'agents', '201', ['id','name','age'], true, true)
 //   .then(data => {
 //     console.log(data);
 //   })
