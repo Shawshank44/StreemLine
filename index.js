@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { Transform } = require('stream');
 
 
 class Database{
@@ -83,21 +84,29 @@ class Database{
 
     batchReadData(clusterpath) {
         return new Promise((resolve, reject) => {
-            const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8' });
-            let datastr = '';
+            const readstream = fs.createReadStream(clusterpath, { encoding: 'utf8', highWaterMark: 64 * 1024 }); // Set an initial buffer size
     
-            readstream.on('data', chunk => {
-                datastr += chunk;
-            });
-    
-            readstream.on('end', () => {
-                try {
-                    const read = JSON.parse(datastr);
-                    resolve(read);
-                } catch (error) {
-                    reject(new Error(`Failed to parse cluster file: ${error.message}`));
+            const transformStream = new Transform({
+                highWaterMark: readstream._readableState.highWaterMark, // Set the same highWaterMark as the read stream
+                transform(chunk, encoding, callback) {
+                    // Process the chunk (in this case, append it to the datastr)
+                    this.datastr += chunk;
+                    callback();
+                },
+                flush(callback) {
+                    try {
+                        const read = JSON.parse(this.datastr);
+                        resolve(read);
+                    } catch (error) {
+                        reject(new Error(`Failed to parse cluster file: ${error.message}`));
+                    }
+                    callback();
                 }
             });
+    
+            transformStream.datastr = ''; // Initialize datastr property
+    
+            readstream.pipe(transformStream); // Pipe the readstream to the transform stream
     
             readstream.on('error', (err) => {
                 reject(new Error(`Failed to read cluster file: ${err.message}`));
@@ -373,7 +382,7 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users', 'agents', { id: '2011', name: 'ronny', age: 25, phonenumber: 9876544378},false,   ['id'])
+// db.insert('users', 'agents', { id: '2011', name: 'ronny', age: 25, phonenumber: 9876544378},true,   ['id'])
 //   .then(() => {
 //     console.log('data inserted successfully');
 //   })
@@ -401,7 +410,7 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'shashank',{key : 765}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'shashank',{key : 448}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
 // db.delete('users', 'agents', (data) => data.name === 'ronny')
@@ -412,7 +421,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users', 'agents', '201', ['id','name','age'], true, true)
+// db.search('users', 'agents', '200', ['id','name','age'], true, true)
 //   .then(data => {
 //     console.log(data);
 //   })
