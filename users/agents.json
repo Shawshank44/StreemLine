@@ -1,12 +1,12 @@
 [
   {
     "id": "2003",
-    "name": "suresh",
-    "age": 20,
-    "phonenumber": 987654280,
+    "name": "rehul",
+    "age": 32,
+    "phonenumber": 987654118,
     "manyToManyRelationship": [
-      "2006",
-      "2008"
+      "2008",
+      "2007"
     ]
   },
   {
@@ -15,59 +15,34 @@
     "age": 22,
     "phonenumber": 987654210,
     "manyToManyRelationship": [
-      "2006",
-      "2008"
+      "2008",
+      "2007"
     ]
   },
   {
     "id": "2005",
-    "name": "rehul",
-    "age": 24,
-    "phonenumber": 987654224
-  },
-  {
-    "id": "2006",
     "name": "mehul",
-    "age": 27,
-    "phonenumber": 987654230,
-    "manyToManyRelationship": [
-      "2004",
-      "2003"
-    ]
+    "age": 34,
+    "phonenumber": 987654222
   },
   {
     "id": "2007",
-    "name": "jehul",
-    "age": 37,
-    "phonenumber": 987654278
-  },
-  {
-    "id": "2008",
-    "name": "rahul",
-    "age": 24,
-    "phonenumber": 987654280,
+    "name": "jake",
+    "age": 32,
+    "phonenumber": 987654780,
     "manyToManyRelationship": [
       "2004",
       "2003"
     ]
   },
   {
-    "id": "2009",
-    "name": "rahims",
-    "age": 23,
-    "phonenumber": 987654220
-  },
-  {
-    "id": "2011",
-    "name": "kehul",
-    "age": 70,
-    "phonenumber": 987654118
-  },
-  {
-    "id": "2011",
-    "name": "kehul",
-    "age": 72,
-    "phonenumber": 987654118,
-    "duplicate": true
+    "id": "2008",
+    "name": "john",
+    "age": 42,
+    "phonenumber": 987654776,
+    "manyToManyRelationship": [
+      "2004",
+      "2003"
+    ]
   }
 ]
