@@ -61,24 +61,23 @@ class Database{
                 reject(new Error(`Failed to write to cluster file: ${err.message}`));
             });
     
-            const totalDataSize = JSON.stringify(data).length;
-            const maxChunkSize = 1024 * 1024; // Set your desired maximum chunk size (e.g., 1MB)
-            let dataIndex = 0;
-    
-            const writeChunk = () => {
-                while (dataIndex < data.length) {
-                    const remainingDataSize = totalDataSize - dataIndex;
-                    const chunkSize = Math.min(remainingDataSize, maxChunkSize);
-                    const chunkData = data.slice(dataIndex, dataIndex + chunkSize);
-                    const chunkDataStr = JSON.stringify(chunkData, null, 2);
-                    writeStream.write(chunkDataStr);
-                    dataIndex += chunkSize;
+            const transformStream = new Transform({
+                transform(chunk, encoding, callback) {
+                    // Process the chunk (in this case, just pass it along)
+                    callback(null, chunk);
                 }
+            });
     
-                writeStream.end();
-            };
+            transformStream.pipe(writeStream);
     
-            writeChunk();
+            // Write each chunk of data to the transform stream
+            const chunkSize = 1024 * 1024; // Set your desired chunk size
+            for (let i = 0; i < data.length; i += chunkSize) {
+                const chunk = data.slice(i, i + chunkSize);
+                transformStream.write(JSON.stringify(chunk, null, 2));
+            }
+    
+            transformStream.end();
         });
     }
 
@@ -382,7 +381,7 @@ const db = new Database()
 // })
 
 // inserting data into the database
-// db.insert('users', 'agents', { id: '2011', name: 'ronny', age: 25, phonenumber: 9876544378},true,   ['id'])
+// db.insert('users', 'agents', { id: '2011', name: 'ronny', age: 25, phonenumber: 9876544378},false,   ['id'])
 //   .then(() => {
 //     console.log('data inserted successfully');
 //   })
@@ -410,7 +409,7 @@ const db = new Database()
 // })
 
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'shashank',{key : 448}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
+// db.update('users','agents',(data)=>data.name === 'shashank',{key : 444}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
 // db.delete('users', 'agents', (data) => data.name === 'ronny')
@@ -421,7 +420,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-// db.search('users', 'agents', '200', ['id','name','age'], true, true)
+// db.search('users', 'agents', '201', ['id','name','age'], true, true)
 //   .then(data => {
 //     console.log(data);
 //   })
