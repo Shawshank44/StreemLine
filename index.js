@@ -213,6 +213,7 @@ class Database{
     });
 }
 
+    
 update(databasename, clustername, QUERY_FUNCTION, updatedData) {
   return new Promise((resolve, reject) => {
       const clusterpath = path.join(databasename, `${clustername}.json`);
@@ -238,52 +239,6 @@ update(databasename, clustername, QUERY_FUNCTION, updatedData) {
    });
   }
 
-  updateAllClusters(databaseName, QUERY_FUNCTION, updatedData) {
-    return new Promise((resolve, reject) => {
-        try {
-            const dbPath = path.join(__dirname, databaseName);
-            if (!fs.existsSync(dbPath)) {
-                return reject(new Error('Database does not exist'));
-            }
-
-            fs.readdir(dbPath, (err, files) => {
-                if (err) {
-                    return reject(new Error(`Error reading database directory: ${err.message}`));
-                }
-
-                const updatePromises = files.map(file => {
-                    if (file.endsWith('.json')) {
-                        const clusterPath = path.join(dbPath, file);
-                        return this.batchReadData(clusterPath)
-                            .then(read => {
-                                read.forEach(row => {
-                                    if (QUERY_FUNCTION(row)) {
-                                        Object.keys(updatedData).forEach(key => {
-                                            row[key] = updatedData[key];
-                                        });
-                                    }
-                                });
-                                return this.batchWriteData(clusterPath, read);
-                            })
-                            .catch(err => {
-                                throw new Error(`Failed to update cluster ${file}: ${err.message}`);
-                            });
-                    }
-                });
-
-                Promise.all(updatePromises)
-                    .then(() => resolve('Data updated successfully in all clusters'))
-                    .catch(error => reject(error));
-            });
-        } catch (error) {
-            reject(error);
-        }
-    });
-}
-
-
-
-
   delete(databaseName, clustername, QUERY_FUNCTION) {
     return new Promise((resolve, reject) => {
         const clusterpath = path.join(databaseName, `${clustername}.json`);
@@ -308,44 +263,6 @@ update(databasename, clustername, QUERY_FUNCTION, updatedData) {
                     .catch(err => reject(new Error(`Failed to write to cluster file: ${err.message}`)));
             })
             .catch(error => reject(new Error(`Error reading data: ${error.message}`)));
-    });
-}
-
-
-deleteFromAllClusters(databaseName, QUERY_FUNCTION) {
-    return new Promise((resolve, reject) => {
-        try {
-            const dbPath = path.join(__dirname, databaseName);
-            if (!fs.existsSync(dbPath)) {
-                return reject(new Error('Database does not exist'));
-            }
-
-            fs.readdir(dbPath, (err, files) => {
-                if (err) {
-                    return reject(new Error(`Error reading database directory: ${err.message}`));
-                }
-
-                const deletePromises = files.map(file => {
-                    if (file.endsWith('.json')) {
-                        const clusterPath = path.join(dbPath, file);
-                        return this.batchReadData(clusterPath)
-                            .then(read => {
-                                const deleteQuery = read.filter(row => !QUERY_FUNCTION(row));
-                                return this.batchWriteData(clusterPath, deleteQuery);
-                            })
-                            .catch(err => {
-                                throw new Error(`Failed to delete data from cluster ${file}: ${err.message}`);
-                            });
-                    }
-                });
-
-                Promise.all(deletePromises)
-                    .then(() => resolve('Data deleted successfully from all clusters'))
-                    .catch(error => reject(error));
-            });
-        } catch (error) {
-            reject(error);
-        }
     });
 }
     
@@ -387,55 +304,6 @@ search(databaseName, clustername, searchElement, searchFields, caseInsensitive =
           .catch(error => reject(new Error(`Error reading data: ${error.message}`)));
   });
 }
-
-searchAllClusters(databaseName, searchElement, searchFields, caseInsensitive = true, useRegex = false) {
-    return new Promise((resolve, reject) => {
-        const databasePath = path.join(__dirname, databaseName);
-        const clusterFiles = fs.readdirSync(databasePath).filter(file => file.endsWith('.json'));
-
-        const results = [];
-
-        const promises = clusterFiles.map(clusterFile => {
-            const clusterpath = path.join(databaseName, clusterFile);
-            return this.batchReadData(clusterpath)
-                .then(clusterData => {
-                    const clusterResults = clusterData.filter(obj => {
-                        for (const field of searchFields) {
-                            const value = obj[field];
-                            if (value) {
-                                let strToMatch = String(value);
-                                if (caseInsensitive) {
-                                    strToMatch = strToMatch.toLowerCase();
-                                    searchElement = searchElement.toLowerCase();
-                                }
-                                if (useRegex) {
-                                    const regex = new RegExp(searchElement);
-                                    if (regex.test(strToMatch)) {
-                                        return true;
-                                    }
-                                } else {
-                                    if (strToMatch.includes(searchElement)) {
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                        return false;
-                    });
-                    results.push(...clusterResults);
-                })
-                .catch(error => console.log(`Error reading data from cluster ${clusterFile}: ${error.message}`));
-        });
-
-        Promise.all(promises)
-            .then(() => {
-                resolve(results);
-            })
-            .catch(error => reject(new Error(`Error searching clusters: ${error.message}`)));
-    });
-}
-
-
     
 createLink(databaseName, clusterName, sourceIDs, targetIDs) {
   return new Promise((resolve, reject) => {
@@ -512,23 +380,8 @@ const db = new Database()
 //     console.log(err);
 // })
 
-// db.createCluster('users','orders').then(()=>{
-//     console.log('cluster created');
-// }).catch((err)=>{
-//     console.log(err);
-// })
-
-
 // inserting data into the database
-// db.insert('users', 'agents', { id: '2010', name: 'ronny', age: 33, phonenumber: 9876544292},false,   ['id'])
-//   .then(() => {
-//     console.log('data inserted successfully');
-//   })
-//   .catch((err) => {
-//     console.log(err);
-//   });
-
-// db.insert('users', 'orders', { id: '2010',orderid : 407, customer: 'ronny', phonenumber: 9876544292,items : ['spec','shunts','resistors','capacitors'],total : 750},false,   ['orderid'])
+// db.insert('users', 'agents', { id: '2006', name: 'roony', age: 29, phonenumber: 9876544229},false,   ['id'])
 //   .then(() => {
 //     console.log('data inserted successfully');
 //   })
@@ -537,7 +390,8 @@ const db = new Database()
 //   });
 
 
-// db.createLink('users', 'agents', ['2004'], ['2001','2008','2006','2010'])
+
+// db.createLink('users', 'agents', ['2004'], ['2006','2001','2002'])
 //   .then(() => {
 //     console.log('many-to-many relationship created successfully');
 //   })
@@ -554,27 +408,11 @@ const db = new Database()
 //     console.log(err);
 // })
 
-// db.Query('users','orders',(data)=>data.id === '2010')
-// .then((data)=>{
-//     console.log(data);
-// }).catch((err)=>{
-//     console.log(err);
-// })
-
-
 // Update the data : 
-// db.update('users','agents',(data)=>data.name === 'shashank',{age : 21}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
-
-// db.updateAllClusters('users', (data) => data.id === '2010', {phonenumber: 9876544238})
-//   .then(() => {
-//     console.log('Data updated in all clusters');
-//   })
-//   .catch((err) => {
-//     console.log(err);
-//   });
+// db.update('users','agents',(data)=>data.name === 'shashank',{key : 444}).then(()=>console.log('data updated')).catch((err)=>console.log(err))
 
 // delete data:
-// db.delete('users', 'agents', (data) => data.customer === 'ronny')
+// db.delete('users', 'agents', (data) => data.name === 'roony')
 //   .then(() => {
 //       console.log('deleted success');
 //   })
@@ -582,25 +420,7 @@ const db = new Database()
 //     console.log(err);
 //   });
 
-
-// db.deleteFromAllClusters('users', (data) => data.id === '2010')
-//   .then(() => {
-//     console.log('Data deleted from all clusters');
-//   })
-//   .catch((err) => {
-//     console.log(err);
-//   });
-
-
 // db.search('users', 'agents', 'shashank', ['id','name','age'], true, true)
-//   .then(data => {
-//     console.log(data);
-//   })
-//   .catch(err => {
-//     console.log(err);
-//   });
-
-// db.searchAllClusters('users', '2010', ['id','name','age'], true, true)
 //   .then(data => {
 //     console.log(data);
 //   })
